@@ -1,0 +1,148 @@
+"""Seed data — categories, agent nodes, reference products."""
+
+CATEGORIES = {
+    'plant': {'name': 'Plant Agent', 'description': 'Moisture/light/temp sensing, watering control, plant mood'},
+    'desk': {'name': 'Desk Agent', 'description': 'Button/knob/display for personal AI agent'},
+    'pet': {'name': 'Pet Agent', 'description': 'Treat dispenser, camera, sound, feeding reminders'},
+    'ambient': {'name': 'Ambient Home Agent', 'description': 'Smart lamps, speakers, displays, kinetic sculptures'},
+    'gift': {'name': 'Relationship/Gift', 'description': 'Linked lamps, touch objects, message printers'},
+    'maker': {'name': 'Maker/Collector Robot', 'description': 'Tiny heads, moving cameras, desktop creatures'},
+    'wellness': {'name': 'Wellness/Routine', 'description': 'Hydration, medication, sleep lighting, habit trackers'},
+}
+
+AGENT_NODES = {
+    'pow-agent-node': {
+        'name': 'POW Agent Node',
+        'description': 'Generic ESP32-S3 intelligence/control core',
+        'mcu': 'ESP32-S3',
+        'connectivity': 'WiFi+BLE',
+        'io': ['mic', 'speaker_out', 'rgb', 'I2C', 'GPIO', 'servo', 'sensor_ports', 'USB-C'],
+        'price_usd': 8,
+    },
+    'pow-motion-node': {
+        'name': 'POW Motion Node',
+        'description': 'Motor/encoder/control core',
+        'mcu': 'STM32',
+        'connectivity': 'CAN',
+        'io': ['motor_x4', 'encoder_x4', 'current_sense', 'servo_out'],
+        'price_usd': 15,
+    },
+    'pow-power-node': {
+        'name': 'POW Power Node',
+        'description': 'Battery/charging/BMS/power monitoring',
+        'mcu': 'ESP32-C3',
+        'connectivity': 'I2C',
+        'io': ['battery', 'charging', 'buck_boost', 'bms', 'power_monitor'],
+        'price_usd': 12,
+    },
+}
+
+REFERENCE_PRODUCTS = {
+    'plant-agent-basic': {
+        'name': 'Plant Agent Basic',
+        'category': 'plant',
+        'description': 'ESP32 plant monitor with moisture/light/temp + RGB LED',
+        'target_price_usd': 25,
+        'personalization': ['plant_type', 'led_color', 'notification_style', 'voice_personality'],
+        'bom': [
+            {'component': 'esp32s3', 'qty': 1, 'role': 'compute'},
+            {'component': 'soil_moisture_sensor', 'qty': 1, 'role': 'sensing'},
+            {'component': 'bh1750', 'qty': 1, 'role': 'light_sensing'},
+            {'component': 'sht30', 'qty': 1, 'role': 'temp_humidity'},
+            {'component': 'ws2812b_led', 'qty': 1, 'role': 'output'},
+            {'component': 'usb_c_connector', 'qty': 1, 'role': 'power'},
+            {'component': 'jst_ph_2pin', 'qty': 3, 'role': 'connection'},
+        ],
+    },
+    'desk-agent-button': {
+        'name': 'Desk Agent Button',
+        'category': 'desk',
+        'description': 'Physical button/knob/LED for personal AI agent',
+        'target_price_usd': 35,
+        'personalization': ['knob_function', 'led_behavior', 'engraving', 'agent_workflow'],
+        'bom': [
+            {'component': 'esp32s3', 'qty': 1, 'role': 'compute'},
+            {'component': 'rotary_encoder', 'qty': 1, 'role': 'input'},
+            {'component': 'oled_096', 'qty': 1, 'role': 'display'},
+            {'component': 'ws2812b_led', 'qty': 1, 'role': 'status'},
+            {'component': 'tactile_button', 'qty': 2, 'role': 'input'},
+            {'component': 'usb_c_connector', 'qty': 1, 'role': 'power'},
+        ],
+    },
+    'pet-treat-cam': {
+        'name': 'Pet Treat Camera',
+        'category': 'pet',
+        'description': 'Camera + treat dispenser + sound for pets',
+        'target_price_usd': 45,
+        'personalization': ['pet_type', 'treat_size', 'sound_clips', 'schedule'],
+        'bom': [
+            {'component': 'esp32s3', 'qty': 1, 'role': 'compute'},
+            {'component': 'ov2640_camera', 'qty': 1, 'role': 'vision'},
+            {'component': 'sg90_servo', 'qty': 1, 'role': 'treat_dispense'},
+            {'component': 'max98357a_amp', 'qty': 1, 'role': 'audio'},
+            {'component': 'speaker_3w', 'qty': 1, 'role': 'audio_output'},
+            {'component': 'ws2812b_led', 'qty': 1, 'role': 'status'},
+            {'component': 'usb_c_connector', 'qty': 1, 'role': 'power'},
+        ],
+    },
+    'ambient-mood-lamp': {
+        'name': 'Ambient Mood Lamp',
+        'category': 'ambient',
+        'description': 'AI-controlled color-changing lamp with presence sensing',
+        'target_price_usd': 30,
+        'personalization': ['color_scheme', 'shape', 'room_type', 'schedule'],
+        'bom': [
+            {'component': 'esp32s3', 'qty': 1, 'role': 'compute'},
+            {'component': 'ws2812b_led', 'qty': 2, 'role': 'lighting'},
+            {'component': 'pir_sensor', 'qty': 1, 'role': 'presence'},
+            {'component': 'sht30', 'qty': 1, 'role': 'environment'},
+            {'component': 'usb_c_connector', 'qty': 1, 'role': 'power'},
+        ],
+    },
+    'gift-linked-lamps': {
+        'name': 'Linked Lamps',
+        'category': 'gift',
+        'description': 'Two lamps that sync color when one is touched',
+        'target_price_usd': 55,
+        'personalization': ['color_palette', 'shape', 'engraving', 'message'],
+        'bom': [
+            {'component': 'esp32s3', 'qty': 2, 'role': 'compute'},
+            {'component': 'ws2812b_led', 'qty': 2, 'role': 'lighting'},
+            {'component': 'capacitive_touch', 'qty': 2, 'role': 'input'},
+            {'component': 'usb_c_connector', 'qty': 2, 'role': 'power'},
+        ],
+    },
+    'wellness-hydration': {
+        'name': 'Hydration Reminder',
+        'category': 'wellness',
+        'description': 'Water intake tracker with LED feedback',
+        'target_price_usd': 20,
+        'personalization': ['daily_goal', 'led_color', 'reminder_style'],
+        'bom': [
+            {'component': 'esp32s3', 'qty': 1, 'role': 'compute'},
+            {'component': 'ws2812b_led', 'qty': 1, 'role': 'feedback'},
+            {'component': 'tactile_button', 'qty': 3, 'role': 'input'},
+            {'component': 'oled_096', 'qty': 1, 'role': 'display'},
+            {'component': 'usb_c_connector', 'qty': 1, 'role': 'power'},
+        ],
+    },
+}
+
+SUBSTITUTIONS = [
+    ('esp32s3', 'esp32c3', 'partial', 0.7, 'Single core, fewer GPIO, lower cost'),
+    ('esp32s3', 'rp2040', 'partial', 0.6, 'Different SDK, no WiFi/BLE'),
+    ('bh1750', 'tsl2561', 'drop_in', 0.9, 'Same I2C light sensor function'),
+    ('sht30', 'dht22', 'partial', 0.7, 'Lower accuracy, same function'),
+    ('sht30', 'bme280', 'drop_in', 0.95, 'Same I2C, adds pressure'),
+    ('ws2812b_led', 'ws2815_led', 'drop_in', 0.9, 'Same protocol, 12V'),
+    ('ws2812b_led', 'sk6812_led', 'drop_in', 0.9, 'Adds white channel'),
+    ('sg90_servo', 'ds3218_servo', 'partial', 0.5, 'Much higher torque'),
+    ('ov2640_camera', 'ov5640_camera', 'partial', 0.7, 'Higher resolution, same interface'),
+    ('oled_096', 'ssd1306_128x64', 'drop_in', 0.95, 'Same driver, larger display'),
+    ('rotary_encoder', 'rgb_encoder', 'drop_in', 0.9, 'Same function, adds LED'),
+    ('bh1750', 'photoresistor', 'partial', 0.4, 'Analog, lower accuracy, much cheaper'),
+    ('sht30', 'dht11', 'partial', 0.5, 'Lower accuracy, cheaper'),
+    ('usb_c_connector', 'micro_usb', 'partial', 0.6, 'Older standard, reversible no'),
+    ('pir_sensor', 'rcwl0516', 'drop_in', 0.9, 'Microwave alternative, same form'),
+    ('max98357a_amp', 'pam8403', 'partial', 0.7, 'Lower quality, cheaper'),
+]
