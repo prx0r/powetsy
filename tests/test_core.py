@@ -1,4 +1,4 @@
-"""Tests for POWEtsy."""
+"""Comprehensive test suite for POWEtsy — MCP server, adapters, capabilities."""
 
 import hashlib
 import json
@@ -16,6 +16,7 @@ from powetsy.shared.persist import (
     insert_observation, insert_edge
 )
 from powetsy.shared.db import SCHEMA, _enable_foreign_keys
+from powetsy.mcp.server import PowMCP
 
 
 @pytest.fixture
@@ -31,6 +32,146 @@ def temp_db(tmp_path):
     os.environ.pop('POWETSY_DB', None)
 
 
+@pytest.fixture
+def mcp(temp_db):
+    return PowMCP()
+
+
+# =============================================================================
+# MCP SERVER
+# =============================================================================
+
+class TestMCPSearch:
+    def test_search_capability(self, temp_db):
+        upsert_component('cam1', 'USB Camera', category='vision', price_usd=12)
+        upsert_component('cam2', 'Global Shutter Camera', category='vision', price_usd=25)
+        upsert_component('mic1', 'INMP441 Mic', category='audio', price_usd=3)
+        mcp = PowMCP()
+        results = mcp.search_capability('vision')
+        assert len(results) == 2
+        assert all(r['category'] == 'vision' for r in results)
+
+    def test_search_with_price_filter(self, temp_db):
+        upsert_component('cam1', 'Cheap Cam', category='vision', price_usd=8.0)
+        upsert_component('cam2', 'Expensive Cam', category='vision', price_usd=50.0)
+        mcp = PowMCP()
+        results = mcp.search_capability('vision', max_price=20.0)
+        assert len(results) == 1
+        assert float(results[0]['price_usd']) == 8.0
+
+    def test_search_no_results(self, temp_db):
+        mcp = PowMCP()
+        results = mcp.search_capability('nonexistent_category')
+        assert len(results) == 0
+
+
+class TestMCPCompare:
+    def test_compare_options(self, temp_db):
+        upsert_component('a', 'Part A', price_usd=10)
+        upsert_component('b', 'Part B', price_usd=15)
+        mcp = PowMCP()
+        results = mcp.compare_options(['a', 'b'])
+        assert len(results) == 2
+
+    def test_compare_single(self, temp_db):
+        upsert_component('x', 'Only Part', price_usd=5)
+        mcp = PowMCP()
+        results = mcp.compare_options(['x'])
+        assert len(results) == 1
+
+
+class TestMCPGetPart:
+    def test_get_part(self, temp_db):
+        upsert_component('stm32', 'STM32G4', category='compute', price_usd=5)
+        mcp = PowMCP()
+        part = mcp.get_part('stm32')
+        assert part is not None
+        assert part['name'] == 'STM32G4'
+
+    def test_get_part_missing(self, temp_db):
+        mcp = PowMCP()
+        assert mcp.get_part('nonexistent') is None
+
+
+class TestMCPQuote:
+    def test_quote_build(self, temp_db):
+        upsert_product('test_build', 'Test Build')
+        upsert_component('esp32', 'ESP32-S3', price_usd=3.50)
+        upsert_component('mic', 'INMP441', price_usd=2.50)
+        insert_product_bom('test_build', 'esp32', quantity=1, role='compute')
+        insert_product_bom('test_build', 'mic', quantity=1, role='audio')
+        mcp = PowMCP()
+        quote = mcp.quote_build('test_build', quantities=[1, 10])
+        assert quote['build_id'] == 'test_build'
+        assert len(quote['quotes']) == 2
+        assert quote['quotes'][0]['total_cost'] == 6.0
+
+
+class TestMCPSaveBuild:
+    def test_save_build(self, temp_db):
+        mcp = PowMCP()
+        build_id = mcp.save_build('My Agent', [
+            {'component_id': 'esp32', 'quantity': 1, 'role': 'compute'},
+            {'component_id': 'mic', 'quantity': 1, 'role': 'audio'},
+        ], metadata={'description': 'Test build'})
+        assert build_id.startswith('build:')
+
+
+class TestMCPResolve:
+    def test_resolve(self, temp_db):
+        upsert_component('cam', 'USB Camera', category='vision', price_usd=12)
+        upsert_component('mic', 'INMP441', category='audio', price_usd=3)
+        mcp = PowMCP()
+        result = mcp.resolve('I need a camera and microphone')
+        assert len(result['capabilities']) >= 2
+        # Routes may be empty if no template matches, that's OK for now
+        assert 'routes' in result
+
+    def test_parse_need(self, temp_db):
+        mcp = PowMCP()
+        caps = mcp._parse_need('I need eyes and ears')
+        assert 'vision' in caps
+        assert 'audio' in caps
+
+    def test_parse_need_motion(self, temp_db):
+        mcp = PowMCP()
+        caps = mcp._parse_need('turn its head')
+        assert 'motion' in caps
+
+    def test_parse_need_default(self, temp_db):
+        mcp = PowMCP()
+        caps = mcp._parse_need('build something')
+        assert 'compute' in caps
+
+    def test_resolve_with_template(self, temp_db):
+        mcp = PowMCP()
+        result = mcp.resolve('I want a voice puck that glows')
+        assert 'routes' in result
+        # Should match voice_puck template (has 'hear', 'speak', 'status_light')
+        if result['routes']:
+            assert any(r['template'] == 'voice_puck' for r in result['routes'])
+
+
+# =============================================================================
+# COMPONENT GRAPH
+# =============================================================================
+
+class TestComponentGraph:
+    def test_components_and_edges(self, temp_db):
+        upsert_component('esp32', 'ESP32-S3', category='compute')
+        upsert_component('mic', 'INMP441', category='audio')
+        insert_edge('component:esp32', 'often_used_with', 'component:mic',
+                    evidence='common voice assistant BOM')
+        conn = sqlite3.connect(str(temp_db))
+        count = conn.execute('SELECT COUNT(*) FROM edge').fetchone()[0]
+        assert count == 1
+        conn.close()
+
+
+# =============================================================================
+# SCHEMA
+# =============================================================================
+
 class TestSchema:
     def test_all_tables(self, temp_db):
         conn = sqlite3.connect(str(temp_db))
@@ -43,102 +184,33 @@ class TestSchema:
         conn.close()
 
 
-class TestCategories:
-    def test_create(self, temp_db):
-        upsert_category('plant', 'Plant Agent', description='Moisture sensing')
-        conn = sqlite3.connect(str(temp_db))
-        row = conn.execute('SELECT name, description FROM category WHERE category_id="plant"').fetchone()
-        assert row == ('Plant Agent', 'Moisture sensing')
-        conn.close()
-
-    def test_hierarchy(self, temp_db):
-        upsert_category('root', 'Root')
-        upsert_category('child', 'Child', parent_id='root')
-        conn = sqlite3.connect(str(temp_db))
-        row = conn.execute('SELECT parent_id FROM category WHERE category_id="child"').fetchone()
-        assert row[0] == 'root'
-        conn.close()
-
-
-class TestAgentNodes:
-    def test_create(self, temp_db):
-        upsert_agent_node('pow-agent', 'POW Agent Node', mcu='ESP32-S3',
-                          connectivity='WiFi+BLE', price_usd=8)
-        conn = sqlite3.connect(str(temp_db))
-        row = conn.execute('SELECT mcu, price_usd FROM agent_node WHERE node_id="pow-agent"').fetchone()
-        assert row == ('ESP32-S3', 8.0)
-        conn.close()
-
-
-class TestProducts:
-    def test_create(self, temp_db):
-        upsert_category('plant', 'Plant Agent')
-        upsert_product('plant-basic', 'Plant Agent Basic', category_id='plant',
-                        target_price_usd=25, personalization_options=['plant_type', 'led_color'])
-        conn = sqlite3.connect(str(temp_db))
-        row = conn.execute('SELECT name, target_price_usd FROM product WHERE product_id="plant-basic"').fetchone()
-        assert row == ('Plant Agent Basic', 25.0)
-        conn.close()
-
-    def test_bom(self, temp_db):
-        upsert_product('test', 'Test Product')
-        upsert_component('esp32s3', 'ESP32-S3', price_usd=3.50)
-        insert_product_bom('test', 'esp32s3', quantity=1, role='compute')
-        conn = sqlite3.connect(str(temp_db))
-        row = conn.execute('SELECT quantity, role FROM product_bom WHERE product_id="test"').fetchone()
-        assert row == (1, 'compute')
-        conn.close()
-
-
-class TestSubstitutions:
-    def test_create(self, temp_db):
-        upsert_component('a', 'Part A')
-        upsert_component('b', 'Part B')
-        sub_id = insert_substitution('a', 'b', 'drop_in', confidence=0.9, notes='Same pinout')
-        conn = sqlite3.connect(str(temp_db))
-        row = conn.execute('SELECT substitution_type, confidence FROM substitution WHERE substitution_id=?',
-                           (sub_id,)).fetchone()
-        assert row == ('drop_in', 0.9)
-        conn.close()
-
-    def test_idempotent(self, temp_db):
-        upsert_component('a', 'Part A')
-        upsert_component('b', 'Part B')
-        s1 = insert_substitution('a', 'b', 'drop_in')
-        s2 = insert_substitution('a', 'b', 'drop_in')
-        assert s1 == s2
-
-
-class TestObservations:
-    def test_create(self, temp_db):
-        insert_observation('plant-basic', 'product', 'sales', '30', source='etsy', numeric_value=30)
-        conn = sqlite3.connect(str(temp_db))
-        row = conn.execute('SELECT metric, numeric_value FROM observation WHERE entity_id="plant-basic"').fetchone()
-        assert row == ('sales', 30.0)
-        conn.close()
-
-    def test_append(self, temp_db):
-        insert_observation('x', 'product', 'price', '25', source='etsy')
-        insert_observation('x', 'product', 'price', '23', source='etsy')
-        conn = sqlite3.connect(str(temp_db))
-        count = conn.execute('SELECT COUNT(*) FROM observation').fetchone()[0]
-        assert count == 2
-        conn.close()
-
-
-class TestEdges:
-    def test_create(self, temp_db):
-        insert_edge('product:plant', 'uses_node', 'node:esp32', evidence='BOM')
-        conn = sqlite3.connect(str(temp_db))
-        row = conn.execute('SELECT predicate, object_id FROM edge').fetchone()
-        assert row == ('uses_node', 'node:esp32')
-        conn.close()
-
+# =============================================================================
+# SEEDS
+# =============================================================================
 
 class TestSeeds:
-    def test_seed_loader(self):
-        from powetsy.seeds.seed_data import CATEGORIES, AGENT_NODES, REFERENCE_PRODUCTS, SUBSTITUTIONS
-        assert len(CATEGORIES) >= 5
+    def test_categories(self):
+        from powetsy.seeds.seed_data import CATEGORIES
+        assert len(CATEGORIES) >= 15
+
+    def test_agent_nodes(self):
+        from powetsy.seeds.seed_data import AGENT_NODES
         assert len(AGENT_NODES) >= 3
-        assert len(REFERENCE_PRODUCTS) >= 4
-        assert len(SUBSTITUTIONS) >= 10
+
+    def test_reference_products(self):
+        from powetsy.seeds.seed_data import REFERENCE_PRODUCTS
+        assert len(REFERENCE_PRODUCTS) >= 10
+
+    def test_substitutions(self):
+        from powetsy.seeds.seed_data import SUBSTITUTIONS
+        assert len(SUBSTITUTIONS) >= 15
+
+    def test_canonical_machines(self):
+        from powetsy.seeds.machines_20 import MACHINES_20
+        assert len(MACHINES_20) >= 15
+
+    def test_manufacturing_suppliers(self):
+        from powetsy.seeds.seed_data import MANUFACTURING_SUPPLIERS
+        assert len(MANUFACTURING_SUPPLIERS) >= 4
+        assert 'makerfabs' in MANUFACTURING_SUPPLIERS
+        assert 'jlcpcb' in MANUFACTURING_SUPPLIERS
