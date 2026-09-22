@@ -17,6 +17,11 @@ CATEGORIES = {
     'workshop': {'name': 'Workshop Device', 'description': 'Tool monitoring, safety, environmental sensing'},
     'robot': {'name': 'Home Robot', 'description': 'Small mobile robots, arms, educational platforms'},
     'sensor': {'name': 'Environmental Sensor', 'description': 'Room sensing, air quality, weather stations'},
+    # Machine categories (from machines_20)
+    'desktop_robot': {'name': 'Desktop Robot', 'description': 'Small desktop robots and expressive heads'},
+    'agent_device': {'name': 'Agent Device', 'description': 'Physical AI agent endpoints'},
+    'mobile_robot': {'name': 'Mobile Robot', 'description': 'Rovers, drones, wheeled robots'},
+    'open_hardware': {'name': 'Open Hardware', 'description': 'Open-source robotics builds and boards'},
 }
 
 AGENT_NODES = {
