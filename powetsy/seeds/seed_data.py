@@ -146,3 +146,54 @@ SUBSTITUTIONS = [
     ('pir_sensor', 'rcwl0516', 'drop_in', 0.9, 'Microwave alternative, same form'),
     ('max98357a_amp', 'pam8403', 'partial', 0.7, 'Lower quality, cheaper'),
 ]
+
+MANUFACTURING_SUPPLIERS = {
+    'makerfabs': {
+        'name': 'Makerfabs',
+        'location': 'Shenzhen',
+        'capabilities': ['pcb', 'pcba', '3d_print', 'cnc', 'molding', 'assembly', 'programming', 'testing', 'packaging', 'dropship'],
+        'moq': 1,
+        'positioning': 'makers/startups → final product',
+        'website': 'https://www.makerfabs.cc',
+    },
+    'seeed': {
+        'name': 'Seeed Studio',
+        'location': 'Shenzhen',
+        'capabilities': ['pcb', 'pcba', 'mechanical', 'firmware', 'oem', 'odm', 'distribution'],
+        'moq': 1,
+        'positioning': 'AI hardware partner, modules → industrialization',
+        'website': 'https://www.seeedstudio.com',
+    },
+    'elecrow': {
+        'name': 'Elecrow',
+        'location': 'Shenzhen',
+        'capabilities': ['pcb', 'sourcing', 'pcba', 'subassembly', 'tooling', 'molding'],
+        'moq': 1,
+        'positioning': 'turnkey electronics, lower-volume',
+        'website': 'https://www.elecrow.com',
+    },
+    'm5stack': {
+        'name': 'M5Stack',
+        'location': 'Shenzhen',
+        'capabilities': ['modules', 'displays', 'sensors', 'custom_projects'],
+        'moq': 1,
+        'positioning': 'modular ESP32 ecosystem, custom projects',
+        'website': 'https://shop.m5stack.com',
+    },
+    'jlcpcb': {
+        'name': 'JLCPCB',
+        'location': 'Shenzhen',
+        'capabilities': ['pcb', 'pcba', '3d_print', 'stencil'],
+        'moq': 2,
+        'positioning': 'automated electronics factory',
+        'website': 'https://jlcpcb.com',
+    },
+    'pcbway': {
+        'name': 'PCBWay',
+        'location': 'Shenzhen',
+        'capabilities': ['pcb', 'pcba', '3d_print', 'cnc', 'sheet_metal', 'molding'],
+        'moq': 1,
+        'positioning': 'rapid prototyping + manufacturing',
+        'website': 'https://www.pcbway.com',
+    },
+}
